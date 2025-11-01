@@ -1,0 +1,26 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+venv/
+.env
+*.log
+
+# ===== Node =====
+node_modules/
+dist/
+build/
+
+# ===== System =====
+.DS_Store
+Thumbs.db
+
+# ===== Env Files =====
+.env*
+*.local
+
+# ===== IDEs =====
+.vscode/
+.idea/
+
+# ===== Misc =====
+*.sqlite3
