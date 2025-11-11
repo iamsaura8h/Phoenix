@@ -18,4 +18,4 @@ app.include_router(auth.router, prefix="/api")
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Backend is running 🚀"}
+    return {"status": "ok", "message": "Phoenix Backend is running 🚀"}
