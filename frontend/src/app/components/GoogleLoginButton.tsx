@@ -18,7 +18,11 @@ export default function GoogleLoginButton() {
 
       // Save to localStorage for session
       localStorage.setItem("phoenix_user", JSON.stringify(user));
-
+      // Also set a cookie (for middleware)
+      document.cookie = `phoenix_user=${encodeURIComponent(
+        JSON.stringify(user)
+      )}; path=/; max-age=86400`; // 1 day
+      
       alert("✅ Login successful!");
       window.location.href = "/"; // redirect to homepage/dashboard
     } catch (error) {

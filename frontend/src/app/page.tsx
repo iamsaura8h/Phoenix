@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getUser,logout } from "./utils/auth";
+import { getUser, logout } from "./utils/auth";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const u = getUser();
@@ -17,14 +18,52 @@ export default function Home() {
     <div className="p-8">
       <h1 className="font-bold text-4xl">Phoenix Dashboard</h1>
       <p className="text-gray-600 mb-4">Welcome, {user.name}</p>
-      <div className=" py-4">
+
+      {/* Logout Button */}
+      <div className="py-4">
         <button
-          className="px-4 py-1 bg-amber-300 border-2 rounded text-black"
-          onClick={logout}
-          >
-            Logout 
+          className="px-4 py-1 bg-amber-300 border-2 rounded text-black hover:bg-amber-400 transition"
+          onClick={() => setShowModal(true)}
+        >
+          Logout
         </button>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Blurred semi-transparent backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-xs"
+            onClick={() => setShowModal(false)}
+          />
+
+          {/* Modal box */}
+          <div className="relative bg-gray-50 rounded-lg p-6 w-80 shadow-lg text-center">
+            <h2 className="text-xl font-semibold mb-2">Confirm Logout</h2>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-1 rounded border-2 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  logout();
+                }}
+                className="px-4 py-1 rounded bg-amber-500 text-black hover:bg-red-500 border-2"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
