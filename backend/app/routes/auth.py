@@ -1,25 +1,38 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from google.oauth2 import id_token
 from google.auth.transport import requests
-import os
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
 router = APIRouter()
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+# Define request schema
+class TokenRequest(BaseModel):
+    token: str
 
 @router.post("/auth/google")
-def verify_google_token(token: str):
+def verify_google_token(request: TokenRequest):
+    """Verify Google ID token sent from frontend"""
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
-        # Example fields: idinfo["email"], idinfo["name"], idinfo["picture"]
-        return {
-            "status": "success",
-            "user": {
-                "name": idinfo.get("name"),
-                "email": idinfo.get("email"),
-                "picture": idinfo.get("picture")
-            }
+        # Extract token from body
+        token = request.token
+
+        # Verify token using Google's public keys
+        id_info = id_token.verify_oauth2_token(
+            token,
+            requests.Request(),
+            settings.GOOGLE_CLIENT_ID
+        )
+
+        # Extract user info
+        user = {
+            "name": id_info.get("name"),
+            "email": id_info.get("email"),
+            "picture": id_info.get("picture"),
         }
-    except Exception:
+
+        return {"status": "success", "user": user}
+
+    except Exception as e:
+        print("Google token error:", e)
         raise HTTPException(status_code=401, detail="Invalid Google token")
