@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Phoenix Trading App",
+  title: "CryptoTrack Trading App",
   description: "Crypto Trading made simple",
 };
 

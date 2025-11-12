@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [userCount, setUserCount] = useState<number>(0); // new
   const router = useRouter();
 
   useEffect(() => {
@@ -14,6 +15,21 @@ export default function Home() {
     if (!u) router.push("/login");
     else setUser(u);
   }, [router]);
+
+  // ✅ Fetch total users
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/users`);
+        if (!res.ok) throw new Error("Failed to fetch users");
+        const data = await res.json();
+        setUserCount(data.count);
+      } catch (err) {
+        console.error("❌ Error fetching user count:", err);
+      }
+    };
+    fetchUserCount();
+  }, []);
 
   if (!user) return null;
 
@@ -33,8 +49,16 @@ export default function Home() {
 
   return (
     <div className="p-8">
-      <h1 className="font-bold text-4xl">Phoenix Dashboard</h1>
+      <h1 className="font-bold text-4xl">CryptoTrack Dashboard</h1>
       <p className="text-gray-600 mb-4">Welcome, {user.name}</p>
+
+      {/* ✅ Total Users */}
+      <div className="my-4 p-4 border border-amber-200 rounded-lg bg-amber-50 w-fit">
+        <p className="text-gray-700 font-medium">
+          🔥 Total Registered Users:{" "}
+          <span className="font-bold text-amber-700">{userCount}</span>
+        </p>
+      </div>
 
       {/* Logout Button */}
       <div className="py-4">

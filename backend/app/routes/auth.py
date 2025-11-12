@@ -3,18 +3,17 @@ from pydantic import BaseModel
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from app.core.config import settings
+from app.db import users_collection  # import your Mongo connection
 
 router = APIRouter()
 
-# Define request schema
 class TokenRequest(BaseModel):
     token: str
 
 @router.post("/auth/google")
 def verify_google_token(request: TokenRequest):
-    """Verify Google ID token sent from frontend"""
+    """Verify Google ID token and store user in MongoDB"""
     try:
-        # Extract token from body
         token = request.token
 
         # Verify token using Google's public keys
@@ -25,14 +24,29 @@ def verify_google_token(request: TokenRequest):
         )
 
         # Extract user info
-        user = {
+        user_data = {
+            "sub": id_info.get("sub"),       # unique Google ID
             "name": id_info.get("name"),
             "email": id_info.get("email"),
             "picture": id_info.get("picture"),
         }
 
-        return {"status": "success", "user": user}
+        # Upsert (insert if new, update if exists)
+        users_collection.update_one(
+            {"sub": user_data["sub"]},
+            {"$set": user_data},
+            upsert=True
+        )
+
+        return {"status": "success", "user": user_data}
 
     except Exception as e:
         print("Google token error:", e)
         raise HTTPException(status_code=401, detail="Invalid Google token")
+
+
+@router.get("/users")
+def get_all_users():
+    """Fetch all users and total count"""
+    users = list(users_collection.find({}, {"_id": 0}))
+    return {"count": len(users), "users": users}
