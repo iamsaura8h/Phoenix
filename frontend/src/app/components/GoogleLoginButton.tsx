@@ -2,8 +2,12 @@
 
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function GoogleLoginButton() {
+  const router = useRouter();
+
   const handleSuccess = async (credentialResponse: any) => {
     try {
       const token = credentialResponse.credential;
@@ -16,18 +20,22 @@ export default function GoogleLoginButton() {
       const user = res.data.user;
       console.log("✅ Logged in user:", user);
 
-      // Save to localStorage for session
+      // Save session data
       localStorage.setItem("phoenix_user", JSON.stringify(user));
-      // Also set a cookie (for middleware)
       document.cookie = `phoenix_user=${encodeURIComponent(
         JSON.stringify(user)
-      )}; path=/; max-age=86400`; // 1 day
-      
-      alert("✅ Login successful!");
-      window.location.href = "/"; // redirect to homepage/dashboard
+      )}; path=/; max-age=86400`;
+
+      // Show toast (persists through navigation)
+      toast.success(`Welcome ${user.name}!`, {
+        description: "You’ve successfully logged in.",
+      });
+
+      // Soft redirect (client-side)
+      router.push("/");
     } catch (error) {
       console.error(error);
-      alert("❌ Login failed");
+      toast.error("Login failed", { description: "Please try again later." });
     }
   };
 
@@ -35,7 +43,7 @@ export default function GoogleLoginButton() {
     <div>
       <GoogleLogin
         onSuccess={handleSuccess}
-        onError={() => alert("Login failed")}
+        onError={() => toast.error("Google login failed")}
       />
     </div>
   );

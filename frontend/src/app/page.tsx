@@ -1,18 +1,35 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getUser, logout } from "./utils/auth";
+import { getUser } from "./utils/auth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const u = getUser();
-    if (!u) window.location.href = "/login";
+    if (!u) router.push("/login");
     else setUser(u);
-  }, []);
+  }, [router]);
 
   if (!user) return null;
+
+  const handleLogout = () => {
+    setShowModal(false);
+    toast.success("Logged out successfully 👋");
+
+    // clear local data
+    localStorage.removeItem("phoenix_user");
+    document.cookie = "phoenix_user=; path=/; max-age=0";
+
+    // soft navigation so toast persists
+    setTimeout(() => {
+      router.push("/login");
+    }, 800);
+  };
 
   return (
     <div className="p-8">
@@ -34,7 +51,7 @@ export default function Home() {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Blurred semi-transparent backdrop */}
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-xs"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           />
 
@@ -52,10 +69,7 @@ export default function Home() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setShowModal(false);
-                  logout();
-                }}
+                onClick={handleLogout}
                 className="px-4 py-1 rounded bg-amber-500 text-black hover:bg-red-500 border-2"
               >
                 Logout
