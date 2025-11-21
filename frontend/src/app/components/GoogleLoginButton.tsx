@@ -1,3 +1,4 @@
+// File: src/app/components/GoogleLoginButton.tsx
 "use client";
 
 import { GoogleLogin } from "@react-oauth/google";
@@ -5,7 +6,13 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export default function GoogleLoginButton() {
+type GoogleLoginButtonProps = {
+  redirectPath?: string;
+};
+
+export default function GoogleLoginButton({
+  redirectPath = "/home",
+}: GoogleLoginButtonProps) {
   const router = useRouter();
 
   const handleSuccess = async (credentialResponse: any) => {
@@ -21,18 +28,18 @@ export default function GoogleLoginButton() {
       console.log("✅ Logged in user:", user);
 
       // Save session data
-      localStorage.setItem("phoenix_user", JSON.stringify(user));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("phoenix_user", JSON.stringify(user));
+      }
       document.cookie = `phoenix_user=${encodeURIComponent(
         JSON.stringify(user)
       )}; path=/; max-age=86400`;
 
-      // Show toast (persists through navigation)
       toast.success(`Welcome ${user.name}!`, {
         description: "You’ve successfully logged in.",
       });
 
-      // Soft redirect (client-side)
-      router.push("/");
+      router.push(redirectPath);
     } catch (error) {
       console.error(error);
       toast.error("Login failed", { description: "Please try again later." });
@@ -40,7 +47,7 @@ export default function GoogleLoginButton() {
   };
 
   return (
-    <div>
+    <div className="flex justify-center">
       <GoogleLogin
         onSuccess={handleSuccess}
         onError={() => toast.error("Google login failed")}

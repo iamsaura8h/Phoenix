@@ -1,3 +1,4 @@
+// File: src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -19,10 +20,16 @@ export const metadata: Metadata = {
   description: "Crypto Trading made simple",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
         <GoogleProvider>
           {children}
           <Toaster position="top-right" richColors closeButton />
