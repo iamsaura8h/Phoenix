@@ -15,32 +15,39 @@ import { Card } from "@/components/ui/card";
 import { Loader2, TrendingUp } from "lucide-react";
 
 type StrategyInputPanelProps = {
-  onRunBacktest: (asset: string, strategy: string) => Promise<void> | void;
-  loading: boolean;
-  strategy: string;
-  setStrategy: (value: string) => void;
   asset: string;
   setAsset: (value: string) => void;
+
+  strategy: string;
+  setStrategy: (value: string) => void;
+
+  timeframe: string;
+  setTimeframe: (value: string) => void;
+
+  dataRange: string;
+  setDataRange: (value: string) => void;
+
+  loading: boolean;
+  onRunBacktest: () => void;
 };
 
 export default function StrategyInputPanel({
-  onRunBacktest,
-  loading,
-  strategy,
-  setStrategy,
   asset,
   setAsset,
+  strategy,
+  setStrategy,
+  timeframe,
+  setTimeframe,
+  dataRange,
+  setDataRange,
+  loading,
+  onRunBacktest,
 }: StrategyInputPanelProps) {
   const exampleStrategies = [
     "Buy when price crosses above 20-day MA; sell when crosses below.",
     "RSI < 30 entry; exit when RSI > 70.",
     "Golden cross with volume confirmation.",
   ];
-
-  const handleRun = () => {
-    if (!strategy.trim()) return;
-    onRunBacktest(asset, strategy);
-  };
 
   return (
     <div
@@ -52,6 +59,7 @@ export default function StrategyInputPanel({
       "
     >
       <Card className="p-5 bg-card border-border space-y-6">
+
         {/* Title */}
         <div className="flex items-center gap-2 text-primary">
           <TrendingUp className="w-5 h-5" />
@@ -74,6 +82,42 @@ export default function StrategyInputPanel({
           </Select>
         </div>
 
+        {/* NEW: Timeframe (interval) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Timeframe</label>
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="bg-secondary border-border">
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="1m">1 minute</SelectItem>
+              <SelectItem value="5m">5 minutes</SelectItem>
+              <SelectItem value="15m">15 minutes</SelectItem>
+              <SelectItem value="1h">1 hour</SelectItem>
+              <SelectItem value="4h">4 hours</SelectItem>
+              <SelectItem value="1d">1 day</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* NEW: Data Range */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Data Range</label>
+          <Select value={dataRange} onValueChange={setDataRange}>
+            <SelectTrigger className="bg-secondary border-border">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="6m">Last 6 months</SelectItem>
+              <SelectItem value="1y">Last 1 year</SelectItem>
+              <SelectItem value="2y">Last 2 years</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Strategy Input */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-300">
@@ -89,7 +133,7 @@ export default function StrategyInputPanel({
 
         {/* Run Backtest */}
         <Button
-          onClick={handleRun}
+          onClick={onRunBacktest}
           disabled={!strategy.trim() || loading}
           className="w-full h-11 font-semibold"
         >

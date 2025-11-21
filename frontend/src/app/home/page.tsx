@@ -17,8 +17,16 @@ type PhoenixUser = {
 export default function HomePage() {
   const router = useRouter();
   const [user, setUser] = useState<PhoenixUser | null>(null);
+
+  // Strategy Inputs
   const [asset, setAsset] = useState("BTC");
   const [strategy, setStrategy] = useState("");
+
+  // NEW: Timeframe + Data Range
+  const [timeframe, setTimeframe] = useState("1h");      // default 1 hour candles
+  const [dataRange, setDataRange] = useState("30d");     // default 30 days
+
+  // UI State
   const [loading, setLoading] = useState(false);
   const [resultsVisible, setResultsVisible] = useState(false);
 
@@ -37,15 +45,33 @@ export default function HomePage() {
     router.replace("/login");
   };
 
-  // TODO: Replace with real backend call once your FastAPI endpoint is ready
-  const runBacktest = async (assetSymbol: string, strat: string) => {
+  // Updated runBacktest: now includes timeframe + dataRange
+  const runBacktest = async (
+    assetSymbol: string,
+    strat: string,
+    selectedTimeframe: string,
+    selectedRange: string
+  ) => {
     setLoading(true);
     try {
-      console.log("Running backtest for:", { assetSymbol, strat });
-      // Example (when backend is ready):
-      // await runBacktestApi({ asset: assetSymbol, strategy: strat });
+      console.log("Running backtest for:", {
+        assetSymbol,
+        strat,
+        selectedTimeframe,
+        selectedRange,
+      });
 
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // mock delay
+      // In future:
+      /*
+      await runBacktestApi({
+        asset: assetSymbol,
+        strategy: strat,
+        timeframe: selectedTimeframe,
+        range: selectedRange
+      });
+      */
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setResultsVisible(true);
     } finally {
       setLoading(false);
@@ -62,9 +88,16 @@ export default function HomePage() {
           setAsset={setAsset}
           strategy={strategy}
           setStrategy={setStrategy}
+          timeframe={timeframe}
+          setTimeframe={setTimeframe}
+          dataRange={dataRange}
+          setDataRange={setDataRange}
           loading={loading}
-          onRunBacktest={runBacktest}
+          onRunBacktest={() =>
+            runBacktest(asset, strategy, timeframe, dataRange)
+          }
         />
+
         <ResultsPanel resultsVisible={resultsVisible} strategy={strategy} />
       </div>
     </div>
