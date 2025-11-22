@@ -37,7 +37,7 @@ def verify_google_token(request: TokenRequest):
             {"$set": user_data},
             upsert=True
         )
-
+        print("User just authenticated : ",id_info.get("name"))
         return {"status": "success", "user": user_data}
 
     except Exception as e:

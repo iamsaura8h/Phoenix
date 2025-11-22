@@ -6,21 +6,23 @@ from app.services.binance_service import get_klines
 
 
 # -----------------------------
-# LOAD PRICE DATA + INDICATORS
+# LOAD PRICE DATA
 # -----------------------------
 def load_price_data(asset: str, interval: str, range_value: str):
     candles = get_klines(asset, interval, range_value)
     df = pd.DataFrame(candles)
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df["open"] = pd.to_numeric(df["open"])
-    df["high"] = pd.to_numeric(df["high"])
-    df["low"] = pd.to_numeric(df["low"])
-    df["close"] = pd.to_numeric(df["close"])
-    df["volume"] = pd.to_numeric(df["volume"])
+
+    numeric_cols = ["open", "high", "low", "close", "volume"]
+    df[numeric_cols] = df[numeric_cols].astype(float)
+
     return df
 
 
+# -----------------------------
+# INDICATORS
+# -----------------------------
 def apply_indicators(df: pd.DataFrame):
     df["rsi"] = ta.rsi(df["close"], length=14)
     df["ema20"] = ta.ema(df["close"], length=20)
@@ -37,65 +39,57 @@ def apply_indicators(df: pd.DataFrame):
 
 
 # -----------------------------
-# RULE CHECKERS (OPTION A)
+# BUY RULES
 # -----------------------------
 def check_buy(df, i, rule):
     indicator = rule.get("indicator")
     operator = rule.get("operator")
     value = rule.get("value")
 
-    # RSI
+    # RSI < or >
     if indicator == "RSI":
         rsi = df.loc[i, "rsi"]
-        if operator == "<" and rsi < value:
-            return True
-        if operator == ">" and rsi > value:
-            return True
+        if operator == "<" and rsi < value: return True
+        if operator == ">" and rsi > value: return True
 
-    # Price relative to EMA20
+    # price < / > EMA20
     if indicator == "EMA20":
         price = df.loc[i, "close"]
         ema = df.loc[i, "ema20"]
-        if operator == "<" and price < ema:
-            return True
-        if operator == ">" and price > ema:
-            return True
+        if operator == "<" and price < ema: return True
+        if operator == ">" and price > ema: return True
 
     return False
 
 
+# -----------------------------
+# SELL RULES
+# -----------------------------
 def check_sell(df, i, rule):
     indicator = rule.get("indicator")
 
-    # crosses above EMA20
+    # Cross above EMA20
     if indicator == "EMA20" and rule.get("condition") == "crosses_above":
-        prev_price = df.loc[i - 1, "close"]
-        prev_ema = df.loc[i - 1, "ema20"]
-        price = df.loc[i, "close"]
-        ema = df.loc[i, "ema20"]
+        return (
+            df.loc[i-1, "close"] < df.loc[i-1, "ema20"] and
+            df.loc[i, "close"] > df.loc[i, "ema20"]
+        )
 
-        if prev_price < prev_ema and price > ema:
-            return True
-
-    # crosses below EMA20
+    # Cross below EMA20
     if indicator == "EMA20" and rule.get("condition") == "crosses_below":
-        prev_price = df.loc[i - 1, "close"]
-        prev_ema = df.loc[i - 1, "ema20"]
-        price = df.loc[i, "close"]
-        ema = df.loc[i, "ema20"]
+        return (
+            df.loc[i-1, "close"] > df.loc[i-1, "ema20"] and
+            df.loc[i, "close"] < df.loc[i, "ema20"]
+        )
 
-        if prev_price > prev_ema and price < ema:
-            return True
-
-    # RSI threshold
+    # RSI condition
     if indicator == "RSI":
         operator = rule.get("operator")
         value = rule.get("value")
         rsi = df.loc[i, "rsi"]
-        if operator == ">" and rsi > value:
-            return True
-        if operator == "<" and rsi < value:
-            return True
+
+        if operator == ">" and rsi > value: return True
+        if operator == "<" and rsi < value: return True
 
     return False
 
@@ -108,21 +102,21 @@ def run_backtest(asset, interval, range_value, rules):
     df = apply_indicators(df)
 
     in_trade = False
-    entry_price = 0
+    entry_price = None
     trades = []
-    equity = 10000
+    equity = 10000.0
     equity_curve = [equity]
 
     for i in range(1, len(df)):
         price = df.loc[i, "close"]
 
-        # BUY LOGIC
+        # BUY
         if not in_trade and check_buy(df, i, rules.get("buy", {})):
             in_trade = True
             entry_price = price
             continue
 
-        # SELL LOGIC
+        # SELL
         if in_trade and check_sell(df, i, rules.get("sell", {})):
             profit_pct = (price - entry_price) / entry_price
             equity *= (1 + profit_pct)
@@ -131,7 +125,6 @@ def run_backtest(asset, interval, range_value, rules):
 
         equity_curve.append(equity)
 
-    # Final metrics
     wins = len([t for t in trades if t > 0])
     losses = len([t for t in trades if t <= 0])
 
@@ -139,9 +132,11 @@ def run_backtest(asset, interval, range_value, rules):
         "win_ratio": wins / len(trades) if trades else 0,
         "loss_ratio": losses / len(trades) if trades else 0,
         "total_trades": len(trades),
-        "profit_factor": (sum([t for t in trades if t > 0]) /
-                          abs(sum([t for t in trades if t <= 0])) if losses else 1),
+        "profit_factor": (
+            sum([t for t in trades if t > 0]) /
+            abs(sum([t for t in trades if t <= 0])) if losses else 1
+        ),
         "equity_curve": equity_curve,
-        "trades": trades,
         "final_equity": equity,
+        "trades": trades
     }
