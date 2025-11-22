@@ -1,6 +1,10 @@
 // File: src/app/utils/api.ts
-export const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+export const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL!;
+
+// -----------------------------
+// GET ALL USERS
+// -----------------------------
 export async function getAllUsers() {
   try {
     const res = await fetch(`${API_BASE}/api/auth/users`, {
@@ -15,12 +19,15 @@ export async function getAllUsers() {
   }
 }
 
-// Example placeholder for future backtest integration
+// -----------------------------
+// RUN BACKTEST (REAL BACKEND)
+// -----------------------------
 export async function runBacktestApi(payload: {
   asset: string;
   strategy: string;
+  timeframe: string;
+  range: string;
 }) {
-  // TODO: Update endpoint path to match your FastAPI route
   const res = await fetch(`${API_BASE}/api/backtest`, {
     method: "POST",
     headers: {
@@ -30,7 +37,8 @@ export async function runBacktestApi(payload: {
   });
 
   if (!res.ok) {
-    throw new Error("Failed to run backtest");
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to run backtest");
   }
 
   return res.json();

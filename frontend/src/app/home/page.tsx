@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import StrategyInputPanel from "../components/dashboard/StrategyInputPanel";
 import ResultsPanel from "../components/dashboard/ResultsPanel";
 import { getUser, logoutLocal } from "../utils/auth";
+import { runBacktestApi } from "../utils/api";
 
 type PhoenixUser = {
   name?: string;
@@ -22,15 +23,19 @@ export default function HomePage() {
   const [asset, setAsset] = useState("BTC");
   const [strategy, setStrategy] = useState("");
 
-  // NEW: Timeframe + Data Range
-  const [timeframe, setTimeframe] = useState("1h");      // default 1 hour candles
-  const [dataRange, setDataRange] = useState("30d");     // default 30 days
+  // Timeframe + Data Range
+  const [timeframe, setTimeframe] = useState("1h");
+  const [dataRange, setDataRange] = useState("30d");
 
   // UI State
   const [loading, setLoading] = useState(false);
   const [resultsVisible, setResultsVisible] = useState(false);
 
-  // Client-side auth guard
+  // NEW: backend result & rules
+  const [rules, setRules] = useState<any>(null);
+  const [backtestResult, setBacktestResult] = useState<any>(null);
+
+  // Auth Guard
   useEffect(() => {
     const u = getUser();
     if (!u) {
@@ -45,34 +50,31 @@ export default function HomePage() {
     router.replace("/login");
   };
 
-  // Updated runBacktest: now includes timeframe + dataRange
-  const runBacktest = async (
-    assetSymbol: string,
-    strat: string,
-    selectedTimeframe: string,
-    selectedRange: string
-  ) => {
+  // ---- REAL Backtest API Call ----
+  const runBacktest = async () => {
+    if (!strategy.trim()) return;
+
     setLoading(true);
+    setResultsVisible(false);
+
     try {
-      console.log("Running backtest for:", {
-        assetSymbol,
-        strat,
-        selectedTimeframe,
-        selectedRange,
+      console.log("🔄 Calling backend backtest API...");
+
+      const response = await runBacktestApi({
+        asset,
+        strategy,
+        timeframe,
+        range: dataRange,
       });
 
-      // In future:
-      /*
-      await runBacktestApi({
-        asset: assetSymbol,
-        strategy: strat,
-        timeframe: selectedTimeframe,
-        range: selectedRange
-      });
-      */
+      console.log("✅ Backend response:", response);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setRules(response.rules);
+      setBacktestResult(response.result);
       setResultsVisible(true);
+    } catch (error: any) {
+      console.error("❌ Backtest failed:", error);
+      alert(error.message || "Backtest failed");
     } finally {
       setLoading(false);
     }
@@ -93,12 +95,15 @@ export default function HomePage() {
           dataRange={dataRange}
           setDataRange={setDataRange}
           loading={loading}
-          onRunBacktest={() =>
-            runBacktest(asset, strategy, timeframe, dataRange)
-          }
+          onRunBacktest={runBacktest}
         />
 
-        <ResultsPanel resultsVisible={resultsVisible} strategy={strategy} />
+        <ResultsPanel
+          resultsVisible={resultsVisible}
+          strategy={strategy}
+          result={backtestResult}
+          rules={rules}
+        />
       </div>
     </div>
   );
