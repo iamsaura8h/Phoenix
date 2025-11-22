@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth
 from app.core.config import settings
 from app.routes import auth, binance_test, strategy
+from app.routes import backtest
 
 app = FastAPI()
 
@@ -24,6 +25,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(binance_test.router, prefix="/api")
 app.include_router(strategy.router, prefix="/api")
+app.include_router(backtest.router, prefix="/api")
+
 
 @app.get("/")
 def read_root():
