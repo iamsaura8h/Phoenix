@@ -10,6 +10,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",
     "http://localhost:8000",
+    "https://crypto-track-sooty.vercel.app",
 ]
 
 
