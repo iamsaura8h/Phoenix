@@ -31,7 +31,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [resultsVisible, setResultsVisible] = useState(false);
 
-  // NEW: backend result & rules
+  // Backend result & rules
   const [rules, setRules] = useState<any>(null);
   const [backtestResult, setBacktestResult] = useState<any>(null);
 
@@ -50,12 +50,16 @@ export default function HomePage() {
     router.replace("/login");
   };
 
-  // ---- REAL Backtest API Call ----
+  // ---- REAL Backtest API Call (FIXED) ----
   const runBacktest = async () => {
     if (!strategy.trim()) return;
 
     setLoading(true);
     setResultsVisible(false);
+    
+    // 🔥 CRITICAL FIX: Clear old results immediately
+    setBacktestResult(null);
+    setRules(null);
 
     try {
       console.log("🔄 Calling backend backtest API...");
@@ -69,12 +73,17 @@ export default function HomePage() {
 
       console.log("✅ Backend response:", response);
 
+      // Set new results
       setRules(response.rules);
       setBacktestResult(response.result);
       setResultsVisible(true);
     } catch (error: any) {
       console.error("❌ Backtest failed:", error);
       alert(error.message || "Backtest failed");
+      
+      // 🔥 Also clear on error
+      setBacktestResult(null);
+      setRules(null);
     } finally {
       setLoading(false);
     }

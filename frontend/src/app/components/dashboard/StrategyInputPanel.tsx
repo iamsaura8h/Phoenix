@@ -1,7 +1,7 @@
 // File: src/app/components/dashboard/StrategyInputPanel.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Loader2, TrendingUp } from "lucide-react";
+import { validateStrategy } from "@/app/utils/api";
 
 type StrategyInputPanelProps = {
   asset: string;
@@ -43,11 +44,36 @@ export default function StrategyInputPanel({
   loading,
   onRunBacktest,
 }: StrategyInputPanelProps) {
-  const exampleStrategies = [
-    "Buy when price crosses above 20-day MA; sell when crosses below.",
-    "RSI < 30 entry; exit when RSI > 70.",
-    "Golden cross with volume confirmation.",
-  ];
+  const [validation, setValidation] = useState<any>(null);
+  const [isValidating, setIsValidating] = useState(false);
+
+  // -------------------------------
+  // VALIDATION HANDLER (debounced)
+  // -------------------------------
+  useEffect(() => {
+    if (!strategy.trim()) {
+      setValidation(null);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setIsValidating(true);
+      const result = await validateStrategy(strategy);
+      setValidation(result);
+      setIsValidating(false);
+    }, 450); // debounce
+
+    return () => clearTimeout(timeout);
+  }, [strategy]);
+
+const exampleStrategies = [
+  "Buy when RSI falls below 30 and sell when RSI rises above 70.",
+  "Buy when price crosses above the 20 EMA and sell when price crosses below the 20 EMA.",
+  "Buy when price crosses above the 20 SMA and sell when price crosses below the 20 SMA.",
+  "Buy when the 20 EMA crosses above the 50 EMA and sell when the 20 EMA crosses below the 50 EMA.",
+  "Buy when MACD is above the signal line and sell when MACD is below the signal line."
+];
+
 
   return (
     <div
@@ -59,7 +85,6 @@ export default function StrategyInputPanel({
       "
     >
       <Card className="p-5 bg-card border-border space-y-6">
-
         {/* Title */}
         <div className="flex items-center gap-2 text-primary">
           <TrendingUp className="w-5 h-5" />
@@ -82,7 +107,7 @@ export default function StrategyInputPanel({
           </Select>
         </div>
 
-        {/* NEW: Timeframe (interval) */}
+        {/* Timeframe */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-300">Timeframe</label>
           <Select value={timeframe} onValueChange={setTimeframe}>
@@ -100,9 +125,11 @@ export default function StrategyInputPanel({
           </Select>
         </div>
 
-        {/* NEW: Data Range */}
+        {/* Data Range */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-300">Data Range</label>
+          <label className="text-sm font-medium text-gray-300">
+            Data Range
+          </label>
           <Select value={dataRange} onValueChange={setDataRange}>
             <SelectTrigger className="bg-secondary border-border">
               <SelectValue placeholder="Select range" />
@@ -131,10 +158,42 @@ export default function StrategyInputPanel({
           />
         </div>
 
+        {/* VALIDATION MESSAGES */}
+        {isValidating && (
+          <div className="text-xs text-blue-400">Validating strategy…</div>
+        )}
+
+        {validation && !validation.valid && (
+          <div className="bg-yellow-500/10 p-3 rounded text-xs text-yellow-400 space-y-1">
+            <p className="font-semibold">⚠ Strategy Issue:</p>
+            <p>{validation.error}</p>
+
+            {validation.suggestions?.length > 0 && (
+              <div className="pt-2">
+                <p className="font-semibold">Suggestions:</p>
+                {validation.suggestions.map((s: string, i: number) => (
+                  <p key={i}>• {s}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {validation && validation.valid && (
+          <div className="bg-green-500/10 p-3 rounded text-xs text-green-400 space-y-1">
+            <p className="font-semibold">Strategy looks good ✓</p>
+          </div>
+        )}
+
         {/* Run Backtest */}
         <Button
           onClick={onRunBacktest}
-          disabled={!strategy.trim() || loading}
+          disabled={
+            !strategy.trim() ||
+            loading ||
+            isValidating ||
+            (validation && !validation.valid)
+          }
           className="w-full h-11 font-semibold"
         >
           {loading ? (

@@ -2,32 +2,20 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.services.gemini_service import interpret_strategy_with_gemini
-import json
-from app.utils.json_cleaner import extract_json
+from app.services.gemini_service import validate_strategy_with_gemini
 
 router = APIRouter()
 
 class StrategyRequest(BaseModel):
     strategy: str
 
-@router.post("/strategy/interpret")
-def interpret_strategy(req: StrategyRequest):
-    """Convert user strategy into structured buy/sell rules using Gemini."""
+@router.post("/strategy/validate")
+def validate_strategy(req: StrategyRequest):
+    """Validate user strategy using Gemini. Gemini decides valid/invalid and provides suggestions."""
 
-    ai_text = interpret_strategy_with_gemini(req.strategy)
+    result = validate_strategy_with_gemini(req.strategy)
 
-    if not ai_text:
-        raise HTTPException(status_code=500, detail="Failed to interpret strategy with Gemini.")
+    if not result:
+        raise HTTPException(status_code=500, detail="Gemini failed to validate strategy")
 
-    # Try to parse JSON from AI response
-    try:
-        rules = extract_json(ai_text)
-    except Exception as e:
-        print("JSON cleaner: ",e)
-        raise HTTPException(status_code=500, detail="Gemini returned invalid JSON format.")
-
-    return {
-        "status": "success",
-        "rules": rules
-    }
+    return result

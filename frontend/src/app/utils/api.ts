@@ -43,3 +43,16 @@ export async function runBacktestApi(payload: {
 
   return res.json();
 }
+
+// -----------------------------
+// STRATEGY VALIDATION
+// -----------------------------
+export async function validateStrategy(text: string) {
+  const res = await fetch(`${API_BASE}/api/strategy/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ strategy: text }),
+  });
+
+  return res.json();
+}

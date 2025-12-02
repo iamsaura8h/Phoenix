@@ -4,45 +4,59 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.backtest_engine import run_backtest
-from app.services.gemini_service import interpret_strategy_with_gemini
-from app.utils.json_cleaner import extract_json
+from app.services.gemini_service import validate_strategy_with_gemini
 
 router = APIRouter()
+
 
 class BacktestRequest(BaseModel):
     asset: str
     strategy: str
-    timeframe: str   # 1m, 5m, 1h, 1d
-    range: str        # 7d, 30d, 90d, 6m, 1y
+    timeframe: str   # e.g. "1m", "5m", "1h", "1d"
+    range: str       # e.g. "7d", "30d", "6m", "1y"
 
 
 @router.post("/backtest")
 def backtest(req: BacktestRequest):
     """
-    Main backtest endpoint:
-    1. Interpret strategy with Gemini
-    2. Clean JSON using our safe parser
-    3. Run backtest engine
-    4. Return metrics + rules + equity curve
+    1. Validate & interpret strategy using Gemini
+    2. Ensure rules object is clean (buy/sell always exist)
+    3. Run the backtest engine
+    4. Return performance metrics + rules + trade log + equity curve
     """
 
     # ---------------------------
-    # 1. Interpret strategy using Gemini
+    # 1. Validate strategy using Gemini
     # ---------------------------
-    ai_text = interpret_strategy_with_gemini(req.strategy)
-    
-    if not ai_text:
-        raise HTTPException(status_code=500, detail="Gemini interpretation failed.")
+    ai_response = validate_strategy_with_gemini(req.strategy)
+
+    if not ai_response:
+        raise HTTPException(status_code=500, detail="Gemini validation failed.")
+
+    # If Gemini says strategy is invalid
+    if ai_response.get("valid") is False:
+        return {
+            "status": "invalid_strategy",
+            "error": ai_response.get("error"),
+            "suggestions": ai_response.get("suggestions", []),
+            "rules": ai_response.get("rules", {"buy": {}, "sell": {}}),
+        }
 
     # ---------------------------
-    # 2. Clean / extract JSON rules
+    # 2. SAFE rule extraction
     # ---------------------------
-    try:
-        rules = extract_json(ai_text)
-    except Exception as e:
-        print("JSON CLEAN ERROR:", e)
-        raise HTTPException(status_code=500, detail="Gemini returned invalid JSON format.")
+    rules = ai_response.get("rules", {})
 
+    # If somehow Gemini returned a list → reject safely
+    if not isinstance(rules, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Gemini returned rules in an unexpected format (expected an object)."
+        )
+
+    # Ensure essential keys exist
+    rules.setdefault("buy", {})
+    rules.setdefault("sell", {})
 
     # ---------------------------
     # 3. Run Backtest Engine
@@ -54,16 +68,15 @@ def backtest(req: BacktestRequest):
             range_value=req.range,
             rules=rules
         )
-    except Exception as e:
-        print("BACKTEST ENGINE ERROR:", e)
-        raise HTTPException(status_code=500, detail=f"Backtest failed: {str(e)}")
-
+    except Exception as exc:
+        print("BACKTEST ENGINE ERROR:", exc)
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {str(exc)}")
 
     # ---------------------------
-    # 4. Return Response
+    # 4. Return full backtest data
     # ---------------------------
     return {
         "status": "success",
         "rules": rules,
-        "result": result
+        "result": result,
     }
