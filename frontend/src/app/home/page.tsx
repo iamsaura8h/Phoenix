@@ -56,7 +56,7 @@ export default function HomePage() {
 
     setLoading(true);
     setResultsVisible(false);
-    
+
     // 🔥 CRITICAL FIX: Clear old results immediately
     setBacktestResult(null);
     setRules(null);
@@ -80,7 +80,7 @@ export default function HomePage() {
     } catch (error: any) {
       console.error("❌ Backtest failed:", error);
       alert(error.message || "Backtest failed");
-      
+
       // 🔥 Also clear on error
       setBacktestResult(null);
       setRules(null);
@@ -112,6 +112,7 @@ export default function HomePage() {
           strategy={strategy}
           result={backtestResult}
           rules={rules}
+          loading={loading} // 🔥 NEW: Pass loading state
         />
       </div>
     </div>

@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 import { Card } from "@/components/ui/card";
-import { BarChart3, LineChart } from "lucide-react";
+import { BarChart3, LineChart, Loader2 } from "lucide-react";
 import Metric from "./Metric";
 import EquityChart from "./EquityChart";
 import TradeLogTable from "./TradeLogTable";
@@ -13,6 +13,7 @@ type ResultsPanelProps = {
   strategy: string;
   result?: any;
   rules?: any;
+  loading?: boolean; // 🔥 NEW: Added loading prop
 };
 
 export default function ResultsPanel({
@@ -20,6 +21,7 @@ export default function ResultsPanel({
   strategy,
   result,
   rules,
+  loading = false, // 🔥 NEW: Default to false
 }: ResultsPanelProps) {
   const summaryRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -29,12 +31,25 @@ export default function ResultsPanel({
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // 🔥 UPDATED: Show loading state or empty state
   if (!resultsVisible || !result) {
     return (
       <div className="flex-1 p-6 overflow-auto">
         <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
-          <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
-          <p className="text-sm">Run a backtest to see results.</p>
+          {loading ? (
+            <>
+              <Loader2 className="w-12 h-12 mb-3 animate-spin text-primary" />
+              <p className="text-sm font-medium">Running backtest...</p>
+              <p className="text-xs mt-2 opacity-60">
+                This may take a few seconds
+              </p>
+            </>
+          ) : (
+            <>
+              <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+              <p className="text-sm">Run a backtest to see results.</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -44,26 +59,31 @@ export default function ResultsPanel({
     <div className="flex-1 p-6 overflow-auto space-y-6">
       {/* Sticky nav */}
       <div className="sticky top-4 z-20">
-        <div className="flex gap-2 items-center p-2 bg-background/60 rounded">
+        <div className="flex gap-2 items-center p-2 bg-background/60 backdrop-blur rounded">
           <button
-            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm"
+            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm transition-colors"
             onClick={() => scrollTo(summaryRef)}
           >
             Summary
           </button>
           <button
-            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm"
+            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm transition-colors"
             onClick={() => scrollTo(chartRef)}
           >
             Chart
           </button>
           <button
-            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm"
+            className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-sm transition-colors"
             onClick={() => scrollTo(logRef)}
           >
             Trade Log
           </button>
-          <div className="ml-auto text-xs text-muted-foreground">Trades: {result.total_trades}</div>
+          <div className="ml-auto text-xs text-muted-foreground">
+            Trades:{" "}
+            <span className="font-semibold text-foreground">
+              {result.total_trades}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -73,17 +93,31 @@ export default function ResultsPanel({
           <h2 className="text-lg font-semibold mb-4">Backtest Summary</h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <Metric label="Win Ratio" value={`${(result.win_ratio * 100).toFixed(1)}%`} />
-            <Metric label="Loss Ratio" value={`${(result.loss_ratio * 100).toFixed(1)}%`} />
+            <Metric
+              label="Win Ratio"
+              value={`${(result.win_ratio * 100).toFixed(1)}%`}
+            />
+            <Metric
+              label="Loss Ratio"
+              value={`${(result.loss_ratio * 100).toFixed(1)}%`}
+            />
             <Metric label="Total Trades" value={result.total_trades} />
-            <Metric label="Profit Factor" value={result.profit_factor.toFixed(2)} />
-            <Metric label="Final Equity" value={`$${result.final_equity.toFixed(2)}`} />
+            <Metric
+              label="Profit Factor"
+              value={result.profit_factor.toFixed(2)}
+            />
+            <Metric
+              label="Final Equity"
+              value={`$${result.final_equity.toFixed(2)}`}
+            />
             <Metric
               label="Avg Win %"
               value={
-                result.trades.length
+                result.trades.filter((t: any) => t.pl_pct > 0).length > 0
                   ? (
-                      (result.trades.filter((t: any) => t.pl_pct > 0).reduce((a: number, b: any) => a + b.pl_pct, 0) /
+                      (result.trades
+                        .filter((t: any) => t.pl_pct > 0)
+                        .reduce((a: number, b: any) => a + b.pl_pct, 0) /
                         result.trades.filter((t: any) => t.pl_pct > 0).length) *
                       100
                     ).toFixed(2) + "%"
@@ -93,14 +127,15 @@ export default function ResultsPanel({
             <Metric
               label="Avg Loss %"
               value={
-                result.trades.length
+                result.trades.filter((t: any) => t.pl_pct <= 0).length > 0
                   ? (
                       (Math.abs(
                         result.trades
                           .filter((t: any) => t.pl_pct <= 0)
                           .reduce((a: number, b: any) => a + b.pl_pct, 0)
                       ) /
-                        result.trades.filter((t: any) => t.pl_pct <= 0).length) *
+                        result.trades.filter((t: any) => t.pl_pct <= 0)
+                          .length) *
                       100
                     ).toFixed(2) + "%"
                   : "0%"
@@ -138,11 +173,15 @@ export default function ResultsPanel({
       <Card className="p-6 bg-card border-border space-y-3">
         <h3 className="font-semibold">Strategy Interpretation</h3>
         {rules ? (
-          <pre className="text-xs bg-secondary p-3 rounded overflow-auto">{JSON.stringify(rules, null, 2)}</pre>
+          <pre className="text-xs bg-secondary p-3 rounded overflow-auto">
+            {JSON.stringify(rules, null, 2)}
+          </pre>
         ) : (
           <p className="text-sm text-muted-foreground">No rules found.</p>
         )}
-        <div className="text-xs p-3 rounded bg-secondary">{strategy || "Your strategy will appear here."}</div>
+        <div className="text-xs p-3 rounded bg-secondary">
+          {strategy || "Your strategy will appear here."}
+        </div>
       </Card>
     </div>
   );
