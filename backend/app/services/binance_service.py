@@ -52,7 +52,14 @@ def get_klines(symbol: str, interval: str, range_value: str):
         "limit": limit,
     }
 
-    response = requests.get(BINANCE_BASE, params=params)
+    # 🚀 FIX: Add headers so Binance doesn't block (418 Teapot)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "*/*"
+    }
+
+    response = requests.get(BINANCE_BASE, params=params, headers=headers)
     response.raise_for_status()
 
     raw = response.json()
