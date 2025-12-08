@@ -56,7 +56,8 @@ def get_klines(symbol: str, interval: str, range_value: str):
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "*/*"
+        "Accept": "*/*",
+        "X-MBX-APIKEY": settings.BINANCE_API_KEY
     }
 
     response = requests.get(BINANCE_BASE, params=params, headers=headers)
